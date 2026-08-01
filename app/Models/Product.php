@@ -30,6 +30,16 @@ class Product extends Model
     }
 
     /**
+     * この商品を含む注文明細を取得
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function orderItems()
+    {
+        return $this->hasMany(OrderItem::class);
+    }
+
+    /**
      * 一括代入可能なカラム
      *
      * @var array
