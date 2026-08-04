@@ -20,13 +20,13 @@ class Product extends Model
     }
 
     /**
-     * この商品に属する販売情報を取得
+     * この商品を含む注文明細を取得
      *
      * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
-    public function sales()
+    public function orderItems()
     {
-        return $this->hasMany(Sale::class);
+        return $this->hasMany(OrderItem::class);
     }
 
     /**

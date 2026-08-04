@@ -9,8 +9,6 @@ use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
-use App\Http\Requests\RegisterRequest;
-use App\Http\Requests\LoginRequest;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -19,36 +17,15 @@ Route::middleware('guest')->group(function () {
     Route::get('register', [RegisteredUserController::class, 'create'])
         ->name('register');
 
-    // 登録処理（Requestクラスでバリデーション上書き）
-    Route::post('register', function (RegisterRequest $request) {
-        $data = $request->validated();
-
-        $user = \App\Models\User::create([
-            'email' => $data['email'],
-            'password' => bcrypt($data['password']),
-        ]);
-
-        return redirect()->route('login')->with('success', '登録が完了しました。ログインしてください。');
-    });
+    // 登録処理
+    Route::post('register', [RegisteredUserController::class, 'store']);
 
     // ログインフォーム表示（既存）
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');
 
-    // ログイン処理（Requestクラスでバリデーション上書き）
-    Route::post('login', function (LoginRequest $request) {
-        $credentials = $request->validated();
-
-        if (\Illuminate\Support\Facades\Auth::attempt($credentials)) {
-            $request->session()->regenerate();
-            return redirect()->route('products.index')
-                ->with('success', 'ログインしました。');
-        }
-
-        return back()->withErrors([
-            'email' => 'メールアドレスまたはパスワードが正しくありません。',
-        ])->onlyInput('email');
-    });
+    // ログイン処理
+    Route::post('login', [AuthenticatedSessionController::class, 'store']);
 
     // パスワードリセット（既存のまま）
     Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])

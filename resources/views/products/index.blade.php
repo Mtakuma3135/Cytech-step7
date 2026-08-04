@@ -112,5 +112,4 @@
     <script>
         const productSearchUrl = "{{ route('products.search') }}";
     </script>
-    <script src="{{ mix('js/app.js') }}"></script>
 </x-app-layout>
