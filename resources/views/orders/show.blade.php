@@ -31,7 +31,7 @@
                         <p>電話番号：{{ $order->shipping_tel }}</p>
                     @endif
                     <p>お支払い方法：{{ $order->payment_method === 'cod' ? '代金引換' : 'クレジットカード' }}</p>
-                    <p>ステータス：{{ $order->status === 'paid' ? '注文完了' : $order->status }}</p>
+                    <p class="flex items-center gap-2">ステータス：<x-order-status-badge :status="$order->status" /></p>
                 </div>
             </div>
         </div>

@@ -2,27 +2,29 @@
 
 namespace App\Services;
 
-use App\Models\Product;
+use App\Models\CartItem;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 
 /**
- * セッションを利用した簡易カート管理サービス
+ * カート管理サービス（DB永続化）。
+ *
+ * ログインユーザーは user_id、未ログイン（ゲスト）は session_id でカートを識別する。
+ * ゲストがカートに入れた後ログインした場合は mergeGuestCartIntoUser() でユーザーのカートへ統合する。
  */
 class CartService
 {
-    protected const SESSION_KEY = 'cart';
-
     /**
-     * カート内の生データ（product_id => quantity）を取得
+     * 現在のオーナー（ログインユーザー or ゲストセッション）のカート行に絞り込むクエリ
      */
-    protected function raw(): array
+    protected function ownerQuery(): Builder
     {
-        return session(self::SESSION_KEY, []);
-    }
+        if (Auth::check()) {
+            return CartItem::query()->where('user_id', Auth::id());
+        }
 
-    protected function save(array $cart): void
-    {
-        session([self::SESSION_KEY => $cart]);
+        return CartItem::query()->whereNull('user_id')->where('session_id', session()->getId());
     }
 
     /**
@@ -30,9 +32,19 @@ class CartService
      */
     public function add(int $productId, int $quantity): void
     {
-        $cart = $this->raw();
-        $cart[$productId] = ($cart[$productId] ?? 0) + $quantity;
-        $this->save($cart);
+        $item = $this->ownerQuery()->where('product_id', $productId)->first();
+
+        if ($item) {
+            $item->increment('quantity', $quantity);
+            return;
+        }
+
+        CartItem::create([
+            'user_id' => Auth::id(),
+            'session_id' => Auth::check() ? null : session()->getId(),
+            'product_id' => $productId,
+            'quantity' => $quantity,
+        ]);
     }
 
     /**
@@ -40,15 +52,12 @@ class CartService
      */
     public function update(int $productId, int $quantity): void
     {
-        $cart = $this->raw();
-
         if ($quantity <= 0) {
-            unset($cart[$productId]);
-        } else {
-            $cart[$productId] = $quantity;
+            $this->remove($productId);
+            return;
         }
 
-        $this->save($cart);
+        $this->ownerQuery()->where('product_id', $productId)->update(['quantity' => $quantity]);
     }
 
     /**
@@ -56,9 +65,7 @@ class CartService
      */
     public function remove(int $productId): void
     {
-        $cart = $this->raw();
-        unset($cart[$productId]);
-        $this->save($cart);
+        $this->ownerQuery()->where('product_id', $productId)->delete();
     }
 
     /**
@@ -66,7 +73,7 @@ class CartService
      */
     public function clear(): void
     {
-        $this->save([]);
+        $this->ownerQuery()->delete();
     }
 
     /**
@@ -74,29 +81,15 @@ class CartService
      */
     public function items(): Collection
     {
-        $cart = $this->raw();
-
-        if (empty($cart)) {
-            return collect();
-        }
-
-        $products = Product::with('company')->whereIn('id', array_keys($cart))->get()->keyBy('id');
-
-        return collect($cart)
-            ->map(function ($quantity, $productId) use ($products) {
-                $product = $products->get($productId);
-
-                if (! $product) {
-                    return null;
-                }
-
-                return [
-                    'product' => $product,
-                    'quantity' => $quantity,
-                    'subtotal' => $product->price * $quantity,
-                ];
-            })
-            ->filter()
+        return $this->ownerQuery()
+            ->with('product.company')
+            ->get()
+            ->filter(fn (CartItem $item) => $item->product !== null)
+            ->map(fn (CartItem $item) => [
+                'product' => $item->product,
+                'quantity' => $item->quantity,
+                'subtotal' => $item->product->price * $item->quantity,
+            ])
             ->values();
     }
 
@@ -113,6 +106,35 @@ class CartService
      */
     public function count(): int
     {
-        return array_sum($this->raw());
+        return (int) $this->ownerQuery()->sum('quantity');
+    }
+
+    /**
+     * ログイン時に、直前まで使っていたゲストセッションのカートをユーザーのカートへ統合する。
+     *
+     * 呼び出し側は Auth::attempt() 等でログインする「前」の session()->getId() を
+     * $guestSessionId として渡すこと。SessionGuard::login() はセッションIDを
+     * 再生成してから Login イベントを発火するため、イベントリスナー内で
+     * session()->getId() を読んでも既に新しいIDになっており、ゲストカートの行に
+     * マッチしない。
+     */
+    public function mergeGuestCartIntoUser(int $userId, string $guestSessionId): void
+    {
+        $guestItems = CartItem::whereNull('user_id')
+            ->where('session_id', $guestSessionId)
+            ->get();
+
+        foreach ($guestItems as $guestItem) {
+            $userItem = CartItem::where('user_id', $userId)
+                ->where('product_id', $guestItem->product_id)
+                ->first();
+
+            if ($userItem) {
+                $userItem->increment('quantity', $guestItem->quantity);
+                $guestItem->delete();
+            } else {
+                $guestItem->update(['user_id' => $userId, 'session_id' => null]);
+            }
+        }
     }
 }

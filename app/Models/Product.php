@@ -20,16 +20,6 @@ class Product extends Model
     }
 
     /**
-     * この商品に属する販売情報を取得
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
-     */
-    public function sales()
-    {
-        return $this->hasMany(Sale::class);
-    }
-
-    /**
      * この商品を含む注文明細を取得
      *
      * @return \Illuminate\Database\Eloquent\Relations\HasMany

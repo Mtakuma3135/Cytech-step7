@@ -9,6 +9,10 @@ class Order extends Model
 {
     use HasFactory;
 
+    public const STATUS_PENDING = 'pending';
+    public const STATUS_PAID = 'paid';
+    public const STATUS_CANCELLED = 'cancelled';
+
     protected $fillable = [
         'user_id',
         'total_price',
@@ -34,5 +38,18 @@ class Order extends Model
     public function items()
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    /**
+     * 支払い確定済みにする（決済ゲートウェイからの確定通知を受けた時点で呼ぶ想定）
+     */
+    public function markAsPaid(): void
+    {
+        $this->update(['status' => self::STATUS_PAID]);
+    }
+
+    public function isPaid(): bool
+    {
+        return $this->status === self::STATUS_PAID;
     }
 }

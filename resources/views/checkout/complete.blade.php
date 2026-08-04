@@ -25,6 +25,7 @@
                     <p>お届け先：{{ $order->shipping_name }} 様</p>
                     <p>{{ $order->shipping_zip }} {{ $order->shipping_address }}</p>
                     <p>お支払い方法：{{ $order->payment_method === 'cod' ? '代金引換' : 'クレジットカード' }}</p>
+                    <p class="flex items-center gap-2">ステータス：<x-order-status-badge :status="$order->status" /></p>
                 </div>
             </div>
 

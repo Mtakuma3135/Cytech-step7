@@ -16,12 +16,14 @@
                         <x-nav-link :href="route('orders.index')" :active="request()->routeIs('orders.*')">
                             注文履歴
                         </x-nav-link>
-                        <x-nav-link :href="route('products.index')" :active="request()->routeIs('products.*')">
-                            商品管理
-                        </x-nav-link>
-                        <x-nav-link :href="route('admin.companies.index')" :active="request()->routeIs('admin.companies.*')">
-                            メーカー管理
-                        </x-nav-link>
+                        @if(Auth::user()->isAdmin())
+                            <x-nav-link :href="route('products.index')" :active="request()->routeIs('products.*')">
+                                商品管理
+                            </x-nav-link>
+                            <x-nav-link :href="route('admin.companies.index')" :active="request()->routeIs('admin.companies.*')">
+                                メーカー管理
+                            </x-nav-link>
+                        @endif
                     @endauth
                 </div>
             </div>
@@ -97,12 +99,14 @@
                 <x-responsive-nav-link :href="route('orders.index')" :active="request()->routeIs('orders.*')">
                     注文履歴
                 </x-responsive-nav-link>
-                <x-responsive-nav-link :href="route('products.index')" :active="request()->routeIs('products.*')">
-                    商品管理
-                </x-responsive-nav-link>
-                <x-responsive-nav-link :href="route('admin.companies.index')" :active="request()->routeIs('admin.companies.*')">
-                    メーカー管理
-                </x-responsive-nav-link>
+                @if(Auth::user()->isAdmin())
+                    <x-responsive-nav-link :href="route('products.index')" :active="request()->routeIs('products.*')">
+                        商品管理
+                    </x-responsive-nav-link>
+                    <x-responsive-nav-link :href="route('admin.companies.index')" :active="request()->routeIs('admin.companies.*')">
+                        メーカー管理
+                    </x-responsive-nav-link>
+                @endif
             @endauth
         </div>
 

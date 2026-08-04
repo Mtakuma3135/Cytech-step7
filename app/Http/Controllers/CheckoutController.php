@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Services\CartService;
+use App\Services\PaymentService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -12,7 +13,7 @@ use Illuminate\View\View;
 
 class CheckoutController extends Controller
 {
-    public function __construct(protected CartService $cart)
+    public function __construct(protected CartService $cart, protected PaymentService $payment)
     {
     }
 
@@ -56,7 +57,7 @@ class CheckoutController extends Controller
             $order = Order::create([
                 'user_id' => $request->user()->id,
                 'total_price' => $this->cart->total(),
-                'status' => 'paid',
+                'status' => Order::STATUS_PENDING,
                 'payment_method' => $validated['payment_method'],
                 'shipping_name' => $validated['shipping_name'],
                 'shipping_zip' => $validated['shipping_zip'] ?? null,
@@ -79,6 +80,11 @@ class CheckoutController extends Controller
             }
 
             DB::commit();
+
+            // 決済確定処理（現状は即時承認のモック。実ゲートウェイ導入時はWebhook経由の非同期処理に置き換える）
+            if ($this->payment->charge($order)) {
+                $order->markAsPaid();
+            }
 
             $this->cart->clear();
 

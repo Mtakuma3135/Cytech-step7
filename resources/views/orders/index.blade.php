@@ -22,9 +22,7 @@
                             </div>
                             <div class="text-right">
                                 <p class="font-bold text-cyan-700">¥{{ number_format($order->total_price) }}</p>
-                                <span class="inline-block text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">
-                                    {{ $order->status === 'paid' ? '注文完了' : $order->status }}
-                                </span>
+                                <x-order-status-badge :status="$order->status" />
                             </div>
                         </a>
                     @endforeach
